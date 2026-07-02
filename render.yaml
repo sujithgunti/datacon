@@ -1,0 +1,90 @@
+# Render Blueprint — deploys the NestJS API, the FastAPI AI service, and a
+# Postgres database together. In the Render dashboard: New -> Blueprint ->
+# select this repo. Render will read this file automatically.
+#
+# NOTE: written offline (this environment's network policy blocks
+# render.com's docs/API), so double-check it against Render's Blueprint
+# preview before confirming — it validates syntax without creating anything.
+
+databases:
+  - name: datacon-db
+    databaseName: datacon
+    user: datacon
+    plan: free
+    postgresMajorVersion: "16"
+
+envVarGroups:
+  - name: datacon-shared
+    envVars:
+      # Shared secret so the api service can call the ai service's /internal/*
+      # routes; Render generates one value and injects it into every service
+      # below that references this group.
+      - key: INTERNAL_AUTH_TOKEN
+        generateValue: true
+
+services:
+  - type: web
+    name: datacon-api
+    env: node
+    plan: free
+    region: oregon
+    rootDir: app
+    buildCommand: >-
+      npm install &&
+      npm run build --workspace=packages/shared-types &&
+      npx prisma generate --schema packages/prisma/schema.prisma &&
+      npx prisma migrate deploy --schema packages/prisma/schema.prisma &&
+      npm run build --workspace=api
+    startCommand: node api/dist/main.js
+    healthCheckPath: /api/health
+    envVarGroups:
+      - datacon-shared
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: datacon-db
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CONNECTOR_ENCRYPTION_KEY
+        generateValue: true
+      # Set after the ai service's first deploy — see its onrender.com URL in
+      # the Render dashboard (predictable as https://datacon-ai.onrender.com
+      # given the service name below, but confirm rather than assume).
+      - key: AI_SERVICE_URL
+        sync: false
+      # Set to the Vercel deployment's URL once that's live (e.g.
+      # https://datacon.vercel.app) — needed for the auth cookie's CORS check.
+      - key: CORS_ORIGINS
+        sync: false
+
+  - type: web
+    name: datacon-ai
+    env: python
+    plan: free
+    region: oregon
+    rootDir: app/ai
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
+    envVarGroups:
+      - datacon-shared
+    envVars:
+      - key: CHROMA_PERSIST_DIR
+        value: /var/data/chroma
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-5
+      # Optional — leave unset to run on the offline (no-API-key) fallback.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+    # Persistent disk so the ChromaDB vector index survives redeploys.
+    # Render's free plan does not support disks — remove this block (index
+    # rebuilds from re-uploaded documents each deploy) or upgrade the plan.
+    disk:
+      name: datacon-ai-data
+      mountPath: /var/data
+      sizeGB: 1
