@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.log
+.chroma/
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Runtime data — not source, created at run time
+uploads/*
+!uploads/.gitkeep
+ai/data/

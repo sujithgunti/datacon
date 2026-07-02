@@ -1,0 +1,262 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Auth / RBAC ─────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  initials     String
+  avatarGrad   String   @default("var(--ac-grad)")
+  title        String? // e.g. "Senior Analyst", "VP Sales & Ops"
+  roleId       String
+  role         Role     @relation(fields: [roleId], references: [id])
+  tokenVersion Int      @default(0)
+  isCore       Boolean  @default(false) // seed personas: cannot be deleted
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  conversations Conversation[]
+  documents     DataSource[]
+  feedback      Feedback[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  jti       String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String
+  colorHex    String?
+  bgHex       String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  key   String @id
+  label String
+  group String
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId        String
+  permissionKey String
+  role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission    Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
+
+  @@id([roleId, permissionKey])
+  @@map("role_permissions")
+}
+
+// ───────────────────────────── Connectors ─────────────────────────────
+
+enum ConnectorEngine {
+  SQLITE
+  POSTGRES
+  MYSQL
+  MONGODB
+  HTTP
+  BIGQUERY
+  SNOWFLAKE
+}
+
+enum ConnectorStatus {
+  SYNCED
+  SYNCING
+  ERROR
+  PENDING
+}
+
+model Connector {
+  id            String          @id @default(cuid())
+  name          String
+  engine        ConnectorEngine
+  config        Json // non-secret fields (host, database, schema, sslMode, format, ...)
+  secrets       Json // map of fieldKey -> AES-256-GCM encrypted blob (iv:tag:ciphertext, base64)
+  status        ConnectorStatus @default(PENDING)
+  lastTestAt    DateTime?
+  lastTestOk    Boolean?
+  lastTestMsg   String?
+  lastSyncedAt  DateTime?
+  syncInterval  String          @default("Manual only")
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  datasets UnifiedDataset[]
+
+  @@map("connectors")
+}
+
+model UnifiedDataset {
+  id          String    @id @default(cuid())
+  connectorId String
+  connector   Connector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+  name        String
+  columns     Json // string[]
+  rowCount    Int       @default(0)
+  status      String    @default("synced") // "synced" | "syncing" | "error"
+  sampleRows  Json? // string[][] preview rows for the "View table" modal
+  syncedAt    DateTime?
+  lastError   String?
+
+  @@map("unified_datasets")
+}
+
+// ───────────────────────────── Data Sources / RAG ─────────────────────────────
+
+enum DocType {
+  PDF
+  CSV
+  TXT
+  MD
+}
+
+enum DocStatus {
+  UPLOADING
+  CHUNKING
+  INDEXING
+  INDEXED
+  FAILED
+}
+
+model DataSource {
+  id           String    @id @default(cuid())
+  title        String
+  filename     String
+  type         DocType
+  status       DocStatus @default(UPLOADING)
+  sizeBytes    Int
+  chunkCount   Int?
+  rowCount     Int?
+  colCount     Int?
+  storageKey   String?
+  failureMsg   String?
+  uploadedById String
+  uploadedBy   User      @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime  @default(now())
+
+  @@map("data_sources")
+}
+
+// ───────────────────────────── Chat ─────────────────────────────
+
+enum Intent {
+  DESCRIPTIVE
+  DIAGNOSTIC
+  PREDICTIVE
+  PRESCRIPTIVE
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  title     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
+
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String // "user" | "agent"
+  intent         Intent?
+  text           String
+  payload        Json? // { bars? | citations? | predictive? | actions? } shaped per intent
+  createdAt      DateTime     @default(now())
+  feedback       Feedback?
+
+  @@map("messages")
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  messageId String   @unique
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  vote      Int // -1 | 0 | 1
+  createdAt DateTime @default(now())
+
+  @@map("feedback")
+}
+
+// ───────────────────────────── Business metrics (feed agents + dashboard) ─────────────────────────────
+
+// Monthly total revenue history — the real time series the Predictive agent forecasts over.
+model RevenueMetric {
+  id      String   @id @default(cuid())
+  month   DateTime @unique
+  revenue Float
+
+  @@map("revenue_metrics")
+}
+
+// Revenue by region per quarter — the Descriptive agent's "revenue by region" answer.
+model RegionRevenue {
+  id      String @id @default(cuid())
+  quarter String // e.g. "2026-Q1", "2026-Q2"
+  region  String // NA | EMEA | APAC | LATAM
+  revenue Float
+
+  @@unique([quarter, region])
+  @@map("region_revenue")
+}
+
+// Daily support ticket counts by region — lets the Diagnostic agent compute a
+// real "+142% vs 7-day average" style anomaly instead of a hardcoded string.
+model TicketDaily {
+  id     String   @id @default(cuid())
+  date   DateTime
+  region String
+  count  Int
+
+  @@unique([date, region])
+  @@map("ticket_daily")
+}
+
+// Latest churn snapshot — feeds the Prescriptive agent + Insights dashboard.
+model ChurnSnapshot {
+  id             String   @id @default(cuid())
+  asOf           DateTime @default(now())
+  churnPct       Float
+  prevChurnPct   Float
+  atRiskAccounts Int
+
+  @@map("churn_snapshot")
+}

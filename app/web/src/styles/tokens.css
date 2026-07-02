@@ -1,0 +1,318 @@
+@import url("https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+body {
+  background: var(--ac-bg);
+  font-family: "Hanken Grotesk", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: #1a1d29;
+}
+input,
+button,
+textarea,
+select {
+  font-family: inherit;
+}
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d4d7e2;
+  border-radius: 6px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #bfc3d4;
+  background-clip: content-box;
+}
+
+/* ── Theme tokens — ported verbatim from project/Datacon.dc.html ── */
+:root {
+  --ac: #6d4dff;
+  --ac2: #7d5cff;
+  --ac-deep: #5b3fd6;
+  --ac-soft: #efeaff;
+  --ac-softer: #faf9ff;
+  --ac-ring: #c9bdff;
+  --ac-bg: #eef0f6;
+  --ac-grad: linear-gradient(135deg, #6d4dff, #7d5cff);
+  --ac-logo: linear-gradient(135deg, #6d4dff, #2bb8c4);
+}
+.dc-theme {
+  --ac-soft: color-mix(in srgb, var(--ac) 13%, white);
+  --ac-softer: color-mix(in srgb, var(--ac) 6%, white);
+  --ac-ring: color-mix(in srgb, var(--ac) 34%, white);
+  --ac-bg: color-mix(in srgb, var(--ac) 6%, #eef0f6);
+  --ac-grad: linear-gradient(135deg, var(--ac), var(--ac2));
+}
+.dc-theme-soft {
+  --ac: #6d4dff;
+  --ac2: #7d5cff;
+  --ac-deep: #5b3fd6;
+  --ac-logo: linear-gradient(135deg, #6d4dff, #2bb8c4);
+}
+.dc-theme-emerald {
+  --ac: #0f9d6b;
+  --ac2: #17b884;
+  --ac-deep: #0b7d54;
+  --ac-logo: linear-gradient(135deg, #0f9d6b, #12b6a6);
+}
+.dc-theme-sapphire {
+  --ac: #2f66f0;
+  --ac2: #4d84ff;
+  --ac-deep: #2450cf;
+  --ac-logo: linear-gradient(135deg, #2f66f0, #26a7d8);
+}
+.dc-theme-sunset {
+  --ac: #e2544f;
+  --ac2: #f0725c;
+  --ac-deep: #c53c50;
+  --ac-logo: linear-gradient(135deg, #e2544f, #f0a24a);
+}
+.dc-theme-custom {
+  --ac2: color-mix(in srgb, var(--ac) 76%, white);
+  --ac-deep: color-mix(in srgb, var(--ac) 82%, black);
+  --ac-logo: linear-gradient(135deg, var(--ac), var(--ac2));
+}
+
+/* ── Animations ── */
+@keyframes dvblink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+@keyframes dvspin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes dvdraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes dvfadeup {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes dvtoast {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes dvbounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.5);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes dvpulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(217, 162, 58, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(217, 162, 58, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(217, 162, 58, 0);
+  }
+}
+@keyframes dvgrow {
+  from {
+    width: 0;
+  }
+}
+.dvfu {
+  animation: dvfadeup 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+/* ── Sidebar collapse ── */
+.dv-side {
+  width: 236px;
+  transition: width 0.22s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.dv-side.dv-collapsed {
+  width: 74px;
+}
+.dv-navitem {
+  position: relative;
+  justify-content: flex-start;
+}
+.dv-collapsed .dv-navitem {
+  justify-content: center;
+}
+.dv-sub {
+  margin-left: 12px;
+  padding-left: 11px;
+  border-left: 1px solid #e9eaf2;
+}
+.dv-collapsed .dv-sub {
+  margin-left: 0;
+  padding-left: 0;
+  border-left: none;
+}
+.dv-tip {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1a1d29;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  z-index: 80;
+  box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.45);
+}
+.dv-tip::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  background: #1a1d29;
+  border-radius: 1px;
+}
+.dv-collapsed .dv-navitem:hover .dv-tip {
+  opacity: 1;
+}
+
+/* ── Auth brand-panel parallax + pipeline ── */
+@keyframes dvDrift1 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(46px, 34px) scale(1.08);
+  }
+}
+@keyframes dvDrift2 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-38px, 28px) scale(1.05);
+  }
+}
+@keyframes dvDrift3 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(26px, -32px) scale(1.1);
+  }
+}
+@keyframes dvNodeGlow {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+@keyframes dvFlow {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+@keyframes dvPulseDot {
+  0% {
+    box-shadow: 0 0 0 0 rgba(43, 184, 196, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 9px rgba(43, 184, 196, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(43, 184, 196, 0);
+  }
+}
+.dv-plx {
+  position: absolute;
+  inset: 0;
+  transform: translate(calc(var(--mx, 0) * 26px), calc(var(--my, 0) * 26px));
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+}
+.dv-plx2 {
+  position: absolute;
+  inset: 0;
+  transform: translate(calc(var(--mx, 0) * -14px), calc(var(--my, 0) * -14px));
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+}
+.dv-node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font: 600 11px "IBM Plex Mono", monospace;
+  color: #e7e2ff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 7px 12px;
+  border-radius: 9px;
+  animation: dvNodeGlow 3.4s ease-in-out infinite;
+}
+.dv-node span.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+.dv-arrow {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 13px;
+  flex: none;
+}

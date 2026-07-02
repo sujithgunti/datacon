@@ -1,0 +1,112 @@
+{
+  "syncScheduleOptions": ["Manual only", "Every 15 minutes", "Every 30 minutes", "Hourly", "Daily"],
+  "sqlite": {
+    "id": "sqlite",
+    "name": "SQLite",
+    "description": "Local SQLite database file. Ships with a sample warehouse for demos.",
+    "typeLetter": "L",
+    "primary": {
+      "key": "path",
+      "label": "Database file path",
+      "placeholder": "/app/backend/data/sample_warehouse.sqlite",
+      "help": "Absolute path to a .sqlite or .db file readable by the backend."
+    },
+    "secondary": []
+  },
+  "postgres": {
+    "id": "postgres",
+    "name": "PostgreSQL / Redshift",
+    "description": "PostgreSQL or Amazon Redshift via the standard PG protocol.",
+    "typeLetter": "P",
+    "primary": { "key": "host", "label": "Host", "placeholder": "db.example.com" },
+    "secondary": [
+      { "key": "port", "label": "Port", "placeholder": "5432" },
+      { "key": "database", "label": "Database", "placeholder": "analytics", "required": true },
+      { "key": "username", "label": "Username", "placeholder": "analyst@lyra.ai", "required": true },
+      { "key": "password", "label": "Password", "placeholder": "••••••••", "type": "password", "secret": true },
+      { "key": "schema", "label": "Schema", "placeholder": "public", "help": "PG schema to read (default: public). Leave blank to scan all non-system schemas." },
+      { "key": "sslMode", "label": "SSL mode", "kind": "select", "options": ["disable", "allow", "prefer", "require", "verify-ca", "verify-full"], "default": "prefer" }
+    ]
+  },
+  "mysql": {
+    "id": "mysql",
+    "name": "MySQL / MariaDB",
+    "description": "MySQL or MariaDB via the PyMySQL driver.",
+    "typeLetter": "M",
+    "primary": { "key": "host", "label": "Host", "placeholder": "mysql.example.com" },
+    "secondary": [
+      { "key": "port", "label": "Port", "placeholder": "3306" },
+      { "key": "database", "label": "Database / Schema", "placeholder": "analytics", "required": true },
+      { "key": "username", "label": "Username", "placeholder": "analyst@lyra.ai", "required": true },
+      { "key": "password", "label": "Password", "placeholder": "••••••••", "type": "password", "secret": true }
+    ]
+  },
+  "mongodb": {
+    "id": "mongodb",
+    "name": "MongoDB (external)",
+    "description": "External MongoDB cluster — Atlas, EC2 or self-hosted via URI.",
+    "typeLetter": "G",
+    "primary": {
+      "key": "uri",
+      "label": "Connection URI",
+      "placeholder": "mongodb+srv://cluster.acme.net",
+      "help": "Standard MongoDB URI. Treated as a secret.",
+      "secret": true
+    },
+    "secondary": [
+      { "key": "database", "label": "Database", "placeholder": "analytics", "required": true }
+    ]
+  },
+  "http": {
+    "id": "http",
+    "name": "HTTP CSV / Parquet",
+    "description": "Fetch a tabular file (CSV or Parquet) from an HTTP(S) URL.",
+    "typeLetter": "H",
+    "primary": {
+      "key": "url",
+      "label": "File URL",
+      "placeholder": "https://example.com/exports/sales.csv",
+      "help": "Direct link to a .csv or .parquet file (presigned S3/GCS URLs work)."
+    },
+    "secondary": [
+      { "key": "datasetName", "label": "Dataset name", "placeholder": "analyst@lyra.ai", "required": true, "help": "Logical name for this dataset in the unified store." },
+      { "key": "format", "label": "Format", "kind": "select", "options": ["auto", "csv", "parquet"], "default": "auto" },
+      { "key": "authHeader", "label": "Authorization header", "placeholder": "••••••••", "type": "password", "secret": true, "help": "Optional Authorization header value (sent verbatim)." }
+    ]
+  },
+  "bigquery": {
+    "id": "bigquery",
+    "name": "Google BigQuery",
+    "description": "BigQuery warehouse via a Google service-account JSON key.",
+    "typeLetter": "B",
+    "primary": { "key": "projectId", "label": "GCP project ID", "placeholder": "my-gcp-project" },
+    "secondary": [
+      { "key": "dataset", "label": "BigQuery dataset", "placeholder": "analytics", "required": true },
+      {
+        "key": "serviceAccountJson",
+        "label": "Service-account JSON",
+        "kind": "textarea",
+        "placeholder": "{\"type\":\"service_account\",\"project_id\":\"…\",\"private_key\":\"-----BEGIN…\"}",
+        "required": true,
+        "secret": true,
+        "help": "Paste the full JSON contents of your service-account key. Stored encrypted at rest."
+      },
+      { "key": "location", "label": "Location", "placeholder": "US" }
+    ]
+  },
+  "snowflake": {
+    "id": "snowflake",
+    "name": "Snowflake",
+    "description": "Snowflake warehouse using the official Python driver.",
+    "typeLetter": "S",
+    "primary": { "key": "account", "label": "Account identifier", "placeholder": "abc-xy12345 or xy12345.us-east-1" },
+    "secondary": [
+      { "key": "username", "label": "Username", "placeholder": "analyst@lyra.ai", "required": true },
+      { "key": "password", "label": "Password", "placeholder": "••••••••", "type": "password", "required": true, "secret": true },
+      { "key": "warehouse", "label": "Warehouse", "placeholder": "COMPUTE_WH", "required": true },
+      { "key": "database", "label": "Database", "placeholder": "ANALYTICS", "required": true },
+      { "key": "schema", "label": "Schema", "placeholder": "PUBLIC", "required": true },
+      { "key": "role", "label": "Role", "placeholder": "ANALYST" }
+    ]
+  }
+}
