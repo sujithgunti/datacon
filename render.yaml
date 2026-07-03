@@ -72,17 +72,14 @@ services:
     envVars:
       - key: INTERNAL_AUTH_TOKEN
         value: D5kFW75jd7oLQhF0Tx_yMk3JsAnr8Tkd8YbF1WjlzoE
+      # No persistent disk on the free plan, so this lives on the service's
+      # ephemeral local filesystem — the ChromaDB index is rebuilt from
+      # re-uploaded documents after a redeploy/restart. Upgrade to a paid
+      # plan and add a `disk:` block back here if that's undesirable.
       - key: CHROMA_PERSIST_DIR
-        value: /var/data/chroma
+        value: /tmp/chroma
       - key: ANTHROPIC_MODEL
         value: claude-sonnet-5
       # Optional — leave unset to run on the offline (no-API-key) fallback.
       - key: ANTHROPIC_API_KEY
         sync: false
-    # Persistent disk so the ChromaDB vector index survives redeploys.
-    # Render's free plan does not support disks — remove this block (index
-    # rebuilds from re-uploaded documents each deploy) or upgrade the plan.
-    disk:
-      name: datacon-ai-data
-      mountPath: /var/data
-      sizeGB: 1
