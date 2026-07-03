@@ -15,19 +15,29 @@ class LiteLLMClient:
         self._model = settings.llm_model
 
     async def compose(self, system: str, prompt: str, offline_text: str) -> str:
-        try:
-            resp = await litellm.acompletion(
-                model=self._model,
-                messages=[
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": prompt},
-                ],
-                max_tokens=500,
-            )
-            return resp.choices[0].message.content or offline_text
-        except Exception:
-            # A transient provider outage (rate limit, timeout, etc.) shouldn't break the demo,
-            # but silently swallowing this makes "why does chat look static" undiagnosable —
-            # log it so the real cause (bad key, quota, wrong model) shows up in server logs.
-            logger.exception("LiteLLM call failed for model=%s; falling back to offline text", self._model)
-            return offline_text
+        last_error: Exception | None = None
+        for attempt in range(2):
+            try:
+                resp = await litellm.acompletion(
+                    model=self._model,
+                    messages=[
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": prompt},
+                    ],
+                    # Reasoning models (e.g. Gemma's "-it" variants) spend a chunk of
+                    # this budget on internal thinking tokens before the visible
+                    # answer, so this needs headroom beyond a plain chat model.
+                    max_tokens=1024,
+                )
+                content = resp.choices[0].message.content
+                if content:
+                    return content
+                last_error = RuntimeError("empty completion content")
+            except Exception as e:
+                last_error = e
+                logger.warning("LiteLLM call attempt %d failed for model=%s: %s", attempt, self._model, e)
+        # Both attempts failed (or returned empty) — a transient provider outage
+        # (rate limit, timeout, etc.) shouldn't break the demo, but silently
+        # swallowing this makes "why does chat look static" undiagnosable.
+        logger.exception("LiteLLM call failed for model=%s; falling back to offline text", self._model, exc_info=last_error)
+        return offline_text

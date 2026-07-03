@@ -89,7 +89,7 @@ services:
       # LiteLLM "provider/model" string (SRS §2.2) — switching providers is
       # a config change here, not a code change.
       - key: LLM_MODEL
-        value: gemini/gemini-2.5-flash
+        value: gemini/gemma-4-31b-it
       # Optional — leave unset to run on the offline (no-API-key) fallback.
       # Paste the real key in via the Render dashboard's Environment tab —
       # never commit it here.

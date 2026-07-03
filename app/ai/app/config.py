@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     # work too. GEMINI_API_KEY is what LiteLLM itself reads for anything
     # prefixed "gemini/".
     gemini_api_key: str | None = None
-    llm_model: str = "gemini/gemini-2.5-flash"
+    llm_model: str = "gemini/gemma-4-31b-it"
     internal_auth_token: str = "dev-internal-token"
 
 
