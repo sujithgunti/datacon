@@ -14,10 +14,10 @@ class LLMClient(Protocol):
 
 
 def get_llm_client() -> LLMClient:
-    if settings.anthropic_api_key:
-        from app.llm.anthropic_client import AnthropicLLMClient
+    if settings.gemini_api_key:
+        from app.llm.gemini_client import GeminiLLMClient
 
-        return AnthropicLLMClient()
+        return GeminiLLMClient()
     from app.llm.offline_client import OfflineLLMClient
 
     return OfflineLLMClient()

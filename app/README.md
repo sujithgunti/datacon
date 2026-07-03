@@ -37,4 +37,4 @@ Full-stack implementation of the Datacon prototype (`../project/Datacon.dc.html`
 
 ## LLM configuration
 
-Chat works with **zero API keys** out of the box (deterministic offline responses computed over real retrieved/synced data). Set `ANTHROPIC_API_KEY` in `.env` to switch the chat agents to real Claude responses — no code change required.
+Chat works with **zero API keys** out of the box (deterministic offline responses computed over real retrieved/synced data). Set `GEMINI_API_KEY` in `.env` to switch the chat agents to real Gemini/Gemma responses (default model: `gemma-4-31b-it`, configurable via `GEMINI_MODEL`) — no code change required.

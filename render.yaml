@@ -80,8 +80,10 @@ services:
       # plan and add a `disk:` block back here if that's undesirable.
       - key: CHROMA_PERSIST_DIR
         value: /tmp/chroma
-      - key: ANTHROPIC_MODEL
-        value: claude-sonnet-5
+      - key: GEMINI_MODEL
+        value: gemma-4-31b-it
       # Optional — leave unset to run on the offline (no-API-key) fallback.
-      - key: ANTHROPIC_API_KEY
+      # Paste the real key in via the Render dashboard's Environment tab —
+      # never commit it here.
+      - key: GEMINI_API_KEY
         sync: false

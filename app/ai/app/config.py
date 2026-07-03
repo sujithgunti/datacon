@@ -7,8 +7,8 @@ class Settings(BaseSettings):
     database_url: str = ""
     chroma_url: str = "http://localhost:8001"
     chroma_persist_dir: str = "./.chroma"
-    anthropic_api_key: str | None = None
-    anthropic_model: str = "claude-sonnet-5"
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemma-4-31b-it"
     internal_auth_token: str = "dev-internal-token"
 
 

@@ -15,4 +15,4 @@ app.include_router(forecast_router)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "ai", "llm_configured": bool(settings.anthropic_api_key)}
+    return {"status": "ok", "service": "ai", "llm_configured": bool(settings.gemini_api_key)}
