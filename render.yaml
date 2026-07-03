@@ -72,6 +72,12 @@ services:
     startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /health
     envVars:
+      # Render defaults to the latest Python (3.14 as of this writing),
+      # which is too new for several pinned deps (litellm has no 3.14
+      # wheels past ~1.83.x). Pin to the version this was actually built
+      # and tested against.
+      - key: PYTHON_VERSION
+        value: 3.11.15
       - key: INTERNAL_AUTH_TOKEN
         value: D5kFW75jd7oLQhF0Tx_yMk3JsAnr8Tkd8YbF1WjlzoE
       # No persistent disk on the free plan, so this lives on the service's
