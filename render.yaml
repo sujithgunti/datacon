@@ -27,6 +27,7 @@ services:
       npm install --include=dev &&
       npm run build --workspace=packages/shared-types &&
       npx prisma generate --schema packages/prisma/schema.prisma &&
+      npm run build --workspace=packages/prisma &&
       npx prisma migrate deploy --schema packages/prisma/schema.prisma &&
       npm run build --workspace=api
     startCommand: node api/dist/main.js
