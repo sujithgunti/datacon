@@ -37,4 +37,4 @@ Full-stack implementation of the Datacon prototype (`../project/Datacon.dc.html`
 
 ## LLM configuration
 
-Chat works with **zero API keys** out of the box (deterministic offline responses computed over real retrieved/synced data). Set `GEMINI_API_KEY` in `.env` to switch the chat agents to real Gemini/Gemma responses (default model: `gemma-4-31b-it`, configurable via `GEMINI_MODEL`) — no code change required.
+Chat works with **zero API keys** out of the box (deterministic offline responses computed over real retrieved/synced data). The chat agents route through [LiteLLM](https://docs.litellm.ai/) (per the SRS's "LLM Orchestrator" spec) rather than calling a provider SDK directly, so the active model is a single `LLM_MODEL` string in `.env` (default: `gemini/gemini-2.5-flash`) — set `GEMINI_API_KEY` to enable it. Switching providers/models later (e.g. `anthropic/claude-...` + `ANTHROPIC_API_KEY`) is a config change, not a code change.

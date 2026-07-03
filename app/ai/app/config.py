@@ -7,8 +7,13 @@ class Settings(BaseSettings):
     database_url: str = ""
     chroma_url: str = "http://localhost:8001"
     chroma_persist_dir: str = "./.chroma"
+    # LiteLLM orchestrates the provider call from a single "provider/model"
+    # string (SRS §2.2), so swapping providers is a config change, not a
+    # code change — e.g. "anthropic/claude-..." + ANTHROPIC_API_KEY would
+    # work too. GEMINI_API_KEY is what LiteLLM itself reads for anything
+    # prefixed "gemini/".
     gemini_api_key: str | None = None
-    gemini_model: str = "gemma-4-31b-it"
+    llm_model: str = "gemini/gemini-2.5-flash"
     internal_auth_token: str = "dev-internal-token"
 
 

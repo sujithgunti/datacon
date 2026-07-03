@@ -80,8 +80,10 @@ services:
       # plan and add a `disk:` block back here if that's undesirable.
       - key: CHROMA_PERSIST_DIR
         value: /tmp/chroma
-      - key: GEMINI_MODEL
-        value: gemma-4-31b-it
+      # LiteLLM "provider/model" string (SRS §2.2) — switching providers is
+      # a config change here, not a code change.
+      - key: LLM_MODEL
+        value: gemini/gemini-2.5-flash
       # Optional — leave unset to run on the offline (no-API-key) fallback.
       # Paste the real key in via the Render dashboard's Environment tab —
       # never commit it here.

@@ -15,9 +15,9 @@ class LLMClient(Protocol):
 
 def get_llm_client() -> LLMClient:
     if settings.gemini_api_key:
-        from app.llm.gemini_client import GeminiLLMClient
+        from app.llm.litellm_client import LiteLLMClient
 
-        return GeminiLLMClient()
+        return LiteLLMClient()
     from app.llm.offline_client import OfflineLLMClient
 
     return OfflineLLMClient()
