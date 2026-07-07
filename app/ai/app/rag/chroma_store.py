@@ -7,6 +7,13 @@ from functools import lru_cache
 from app.config import settings
 
 _COLLECTION_NAME = "documents"
+# Embedding a large single batch spikes RSS far more than the same chunks
+# embedded in small groups (measured: one batch of 48 added +236MB vs. +8MB
+# for a second batch of 4, after the model's own ~170MB fixed load cost) —
+# on Render's free 512MB plan a big PDF's full chunk list in one add() call
+# was OOM-killing the service. Batching caps the peak regardless of
+# document size.
+_EMBED_BATCH_SIZE = 8
 
 
 @lru_cache(maxsize=1)
@@ -28,9 +35,13 @@ def index_chunks(document_id: str, title: str, filename: str, chunks: list[str])
     if not chunks:
         return
     collection = _collection()
-    ids = [f"{document_id}::{i}" for i in range(len(chunks))]
-    metadatas = [{"document_id": document_id, "title": title, "filename": filename, "chunk_index": i} for i in range(len(chunks))]
-    collection.add(ids=ids, documents=chunks, metadatas=metadatas)
+    for start in range(0, len(chunks), _EMBED_BATCH_SIZE):
+        batch = chunks[start : start + _EMBED_BATCH_SIZE]
+        ids = [f"{document_id}::{start + i}" for i in range(len(batch))]
+        metadatas = [
+            {"document_id": document_id, "title": title, "filename": filename, "chunk_index": start + i} for i in range(len(batch))
+        ]
+        collection.add(ids=ids, documents=batch, metadatas=metadatas)
 
 
 def delete_document(document_id: str) -> None:

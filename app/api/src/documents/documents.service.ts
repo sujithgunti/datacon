@@ -95,7 +95,15 @@ export class DocumentsService {
       });
       return this.shape(updated);
     } catch (e: any) {
-      const failureMsg = e?.response?.data?.detail ?? e?.message ?? "Indexing failed.";
+      // A 502/503/504 means the ai service itself is down/unreachable — surface
+      // that plainly rather than the raw axios message ("Request failed with
+      // status code 502"), which reads like a broken app rather than a
+      // transient, retryable condition.
+      const gatewayStatus = e?.response?.status;
+      const failureMsg =
+        gatewayStatus >= 502 && gatewayStatus <= 504
+          ? "The AI service is temporarily unavailable — please try uploading again in a moment."
+          : (e?.response?.data?.detail ?? e?.message ?? "Indexing failed.");
       const updated = await this.prisma.dataSource.update({
         where: { id: row.id },
         data: { status: "FAILED", failureMsg },
