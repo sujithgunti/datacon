@@ -13,38 +13,86 @@ const INTENT_MAP: Record<string, Intent> = {
 export class ChatService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getOrCreateConversation(userId: string) {
-    const existing = await this.prisma.conversation.findFirst({ where: { userId }, orderBy: { createdAt: "asc" } });
-    if (existing) return existing;
-    return this.prisma.conversation.create({ data: { userId, title: "Chat" } });
+  /** Resolves the conversation for a request: an explicit id (verified to belong
+   * to the user), else the user's most recently active conversation, else a
+   * freshly created one. Used both by the stream endpoint (conversationId
+   * optional — old clients / a first-ever visit still work) and listMessages. */
+  async getOrCreateConversation(userId: string, conversationId?: string) {
+    if (conversationId) {
+      const existing = await this.prisma.conversation.findFirst({ where: { id: conversationId, userId } });
+      if (!existing) throw new NotFoundException("Conversation not found.");
+      return existing;
+    }
+    const latest = await this.prisma.conversation.findFirst({ where: { userId }, orderBy: { updatedAt: "desc" } });
+    if (latest) return latest;
+    return this.prisma.conversation.create({ data: { userId, title: "New chat" } });
   }
 
-  async listMessages(userId: string) {
-    const conversation = await this.getOrCreateConversation(userId);
+  async createConversation(userId: string) {
+    return this.prisma.conversation.create({ data: { userId, title: "New chat" } });
+  }
+
+  async listConversations(userId: string) {
+    const conversations = await this.prisma.conversation.findMany({
+      where: { userId },
+      orderBy: { updatedAt: "desc" },
+      include: { messages: { orderBy: { createdAt: "desc" }, take: 1, select: { text: true } } },
+    });
+    return conversations.map((c) => ({
+      id: c.id,
+      title: c.title ?? "New chat",
+      updatedAt: c.updatedAt,
+      preview: c.messages[0]?.text ?? null,
+    }));
+  }
+
+  async deleteConversation(userId: string, conversationId: string) {
+    const existing = await this.prisma.conversation.findFirst({ where: { id: conversationId, userId } });
+    if (!existing) throw new NotFoundException("Conversation not found.");
+    await this.prisma.conversation.delete({ where: { id: conversationId } });
+  }
+
+  async listMessages(userId: string, conversationId?: string) {
+    const conversation = await this.getOrCreateConversation(userId, conversationId);
     const messages = await this.prisma.message.findMany({
       where: { conversationId: conversation.id },
       orderBy: { createdAt: "asc" },
       include: { feedback: true },
     });
-    return messages.map((m) => ({
-      id: m.id,
-      role: m.role,
-      intent: m.intent?.toLowerCase() ?? null,
-      text: m.text,
-      payload: m.payload,
-      vote: m.feedback?.vote ?? 0,
-      createdAt: m.createdAt,
-    }));
+    return {
+      conversationId: conversation.id,
+      messages: messages.map((m) => ({
+        id: m.id,
+        role: m.role,
+        intent: m.intent?.toLowerCase() ?? null,
+        text: m.text,
+        payload: m.payload,
+        vote: m.feedback?.vote ?? 0,
+        createdAt: m.createdAt,
+      })),
+    };
   }
 
   async appendUserMessage(conversationId: string, text: string) {
-    return this.prisma.message.create({ data: { conversationId, role: "user", text } });
+    const message = await this.prisma.message.create({ data: { conversationId, role: "user", text } });
+    // Auto-title from the first message, ChatGPT-style, and bump updatedAt so
+    // "recent chats" ordering reflects actual activity — verified Prisma does
+    // NOT bump @updatedAt on an update() call with an empty data: {}, so it
+    // must be set explicitly here rather than relying on the field default.
+    const messageCount = await this.prisma.message.count({ where: { conversationId } });
+    await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date(), ...(messageCount === 1 ? { title: text.slice(0, 60) } : {}) },
+    });
+    return message;
   }
 
   async appendAgentMessage(conversationId: string, intent: string, text: string, payload: unknown) {
-    return this.prisma.message.create({
+    const message = await this.prisma.message.create({
       data: { conversationId, role: "agent", intent: INTENT_MAP[intent], text, payload: payload as any },
     });
+    await this.prisma.conversation.update({ where: { id: conversationId }, data: { updatedAt: new Date() } });
+    return message;
   }
 
   async setFeedback(messageId: string, userId: string, vote: -1 | 0 | 1) {

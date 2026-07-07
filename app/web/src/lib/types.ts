@@ -138,6 +138,13 @@ export interface ChatMessage {
   streaming?: boolean;
 }
 
+export interface Conversation {
+  id: string;
+  title: string;
+  updatedAt: string;
+  preview: string | null;
+}
+
 export interface ForecastResult {
   model: string;
   horizon: number;

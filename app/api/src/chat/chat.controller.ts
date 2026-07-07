@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Logger, Param, Patch, Post, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Logger, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
 import type { Response } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../auth/guards/permissions.guard";
@@ -25,15 +25,31 @@ export class ChatController {
     private readonly ai: AiClientService,
   ) {}
 
+  @Get("conversations")
+  async conversations(@CurrentUser() user: AuthenticatedUser) {
+    return this.chat.listConversations(user.id);
+  }
+
+  @Post("conversations")
+  async createConversation(@CurrentUser() user: AuthenticatedUser) {
+    return this.chat.createConversation(user.id);
+  }
+
+  @Delete("conversations/:id")
+  async deleteConversation(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
+    await this.chat.deleteConversation(user.id, id);
+    return { ok: true };
+  }
+
   @Get("messages")
-  async messages(@CurrentUser() user: AuthenticatedUser) {
-    return this.chat.listMessages(user.id);
+  async messages(@Query("conversationId") conversationId: string | undefined, @CurrentUser() user: AuthenticatedUser) {
+    return this.chat.listMessages(user.id, conversationId);
   }
 
   @RequirePermissions("ask_agents")
   @Post("stream")
   async stream(@Body() dto: SendMessageDto, @CurrentUser() user: AuthenticatedUser, @Res() res: Response) {
-    const conversation = await this.chat.getOrCreateConversation(user.id);
+    const conversation = await this.chat.getOrCreateConversation(user.id, dto.conversationId);
     await this.chat.appendUserMessage(conversation.id, dto.message);
     const context = await this.metrics.chatContext(DEFAULT_MODEL, DEFAULT_HORIZON);
 
@@ -59,6 +75,10 @@ export class ChatController {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
+    // Sent first so the client always knows which conversation this reply
+    // landed in — matters when it didn't pass a conversationId itself (e.g.
+    // very first message ever) and the server picked/created one.
+    res.write(`event: conversation\ndata: ${JSON.stringify({ conversationId: conversation.id })}\n\n`);
 
     let buffer = "";
     let finalIntent = "descriptive";
