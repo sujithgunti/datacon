@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Controller, Delete, Get, Param, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../auth/guards/permissions.guard";
@@ -27,5 +27,11 @@ export class DocumentsController {
   @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 25 * 1024 * 1024 } }))
   upload(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: AuthenticatedUser) {
     return this.documents.upload(file, user.id);
+  }
+
+  @RequirePermissions("upload_docs")
+  @Delete(":id")
+  remove(@Param("id") id: string) {
+    return this.documents.remove(id);
   }
 }

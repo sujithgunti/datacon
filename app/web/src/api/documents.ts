@@ -35,3 +35,11 @@ export function useUploadDataSource() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["documents"] }),
   });
 }
+
+export function useDeleteDataSource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => api.delete(`/documents/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["documents"] }),
+  });
+}

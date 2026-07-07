@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { DocType } from "@datacon/prisma";
 import * as path from "path";
 import { PrismaService } from "../prisma/prisma.service";
@@ -9,6 +9,8 @@ const EXT_TO_TYPE: Record<string, DocType> = { pdf: "PDF", csv: "CSV", txt: "TXT
 
 @Injectable()
 export class DocumentsService {
+  private readonly logger = new Logger(DocumentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly ai: AiClientService,
@@ -53,6 +55,23 @@ export class DocumentsService {
       rowCount: row.rowCount,
       sampleRows: row.sampleRows as string[][],
     };
+  }
+
+  async remove(id: string) {
+    const row = await this.prisma.dataSource.findUnique({ where: { id } });
+    if (!row) throw new NotFoundException("Data source not found.");
+
+    // Best-effort: clean up the ChromaDB index entry (PDF/TXT/MD only —
+    // CSVs were never indexed there, so this is a harmless no-op for them).
+    // Don't let the ai service being unreachable block the actual delete.
+    try {
+      await this.ai.client.delete(`/internal/documents/${id}`);
+    } catch (e: any) {
+      this.logger.warn(`Failed to remove ${id} from the vector index (deleting the record anyway): ${e?.message ?? e}`);
+    }
+
+    await this.prisma.dataSource.delete({ where: { id } });
+    return { ok: true };
   }
 
   async upload(file: Express.Multer.File, uploadedById: string) {

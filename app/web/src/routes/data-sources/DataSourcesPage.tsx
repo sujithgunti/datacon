@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../../auth/AuthContext";
-import { useDataSources } from "../../api/documents";
+import { useDataSources, useDeleteDataSource } from "../../api/documents";
 import { Button } from "../../components/ui/Button";
 import { UploadModal } from "./UploadModal";
 import { DataSourceTableModal } from "./DataSourceTableModal";
@@ -29,8 +29,14 @@ function formatSize(row: DataSourceRecord): string {
 export function DataSourcesPage() {
   const { caps, user } = useAuth();
   const { data: rows, isLoading, refetch, isFetching } = useDataSources();
+  const deleteDataSource = useDeleteDataSource();
   const [showUpload, setShowUpload] = useState(false);
   const [previewId, setPreviewId] = useState<string | null>(null);
+
+  const removeRow = (row: DataSourceRecord) => {
+    if (!window.confirm(`Delete "${row.title}"? This can't be undone.`)) return;
+    deleteDataSource.mutate(row.id);
+  };
 
   return (
     <div style={{ padding: 32, maxWidth: 1080, margin: "0 auto" }}>
@@ -69,7 +75,7 @@ export function DataSourcesPage() {
           <span>SIZE</span>
           <span>STATUS</span>
           <span>UPLOADED</span>
-          <span></span>
+          <span>ACTIONS</span>
         </div>
         {isLoading && <div style={{ padding: 20, color: "#9499ad" }}>Loading…</div>}
         {rows?.map((row) => {
@@ -96,21 +102,49 @@ export function DataSourcesPage() {
                 {new Date(row.createdAt).toLocaleString()}
                 <div>by {row.uploadedBy}</div>
               </div>
-              <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 {row.type === "CSV" && row.status === "INDEXED" && (
                   <button
                     onClick={() => setPreviewId(row.id)}
+                    title="View table"
+                    aria-label="View table"
                     style={{
-                      font: "600 11px 'IBM Plex Mono',monospace",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 30,
+                      height: 30,
                       color: "#5b3fd6",
                       background: "#efeaff",
                       border: "none",
                       borderRadius: 8,
-                      padding: "6px 10px",
                       cursor: "pointer",
+                      fontSize: 14,
                     }}
                   >
-                    ⊞ View table
+                    👁
+                  </button>
+                )}
+                {caps.uploadDocs && (
+                  <button
+                    onClick={() => removeRow(row)}
+                    title="Delete"
+                    aria-label="Delete"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 30,
+                      height: 30,
+                      color: "#c0392b",
+                      background: "#fdeee9",
+                      border: "none",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                      fontSize: 13,
+                    }}
+                  >
+                    🗑
                   </button>
                 )}
               </div>
