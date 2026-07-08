@@ -2,10 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
 import type { ChatMessage, Conversation } from "../lib/types";
 
-export function useConversations() {
+export function useConversations(search?: string) {
+  // The search term is part of the key, so the sidebar's recents (no search)
+  // and the history page's filtered results cache separately; the broad
+  // ["chat-conversations"] invalidations elsewhere still prefix-match both.
   return useQuery({
-    queryKey: ["chat-conversations"],
-    queryFn: async () => (await api.get<Conversation[]>("/chat/conversations")).data,
+    queryKey: ["chat-conversations", search ?? ""],
+    queryFn: async () =>
+      (await api.get<Conversation[]>("/chat/conversations", { params: { search: search?.trim() || undefined } })).data,
   });
 }
 

@@ -13,7 +13,7 @@ interface NavDef {
 }
 
 const NAV: NavDef[] = [
-  { id: "chat", icon: "💬", label: "Chat", to: "/chat" },
+  { id: "chat", icon: "💬", label: "Chat", to: "/chat/history" },
   { id: "insights", icon: "📊", label: "Insights", to: "/insights" },
   { id: "connectors", icon: "🔌", label: "Connectors", to: "/connectors" },
   { id: "documents", icon: "🗄️", label: "Data Sources", to: "/data-sources" },
@@ -42,6 +42,9 @@ export function Sidebar() {
   const deleteConversation = useDeleteConversation();
 
   const onUserMgmtPage = location.pathname.startsWith("/settings");
+  // Keep "Chat" highlighted both on the history list (/chat/history) and inside
+  // an actual conversation (/chat?c=…), since the nav item now opens history.
+  const onChatArea = location.pathname === "/chat" || location.pathname.startsWith("/chat/");
   const activeConversationId = location.pathname === "/chat" ? searchParams.get("c") : null;
 
   const startNewChat = async () => {
@@ -145,9 +148,9 @@ export function Sidebar() {
                     borderRadius: 10,
                     fontSize: 13.5,
                     textDecoration: "none",
-                    background: isActive || (item.id === "settings" && onUserMgmtPage) ? "var(--ac-grad)" : "transparent",
-                    color: isActive || (item.id === "settings" && onUserMgmtPage) ? "#fff" : "#71768a",
-                    fontWeight: isActive || (item.id === "settings" && onUserMgmtPage) ? 700 : 500,
+                    background: isActive || (item.id === "settings" && onUserMgmtPage) || (item.id === "chat" && onChatArea) ? "var(--ac-grad)" : "transparent",
+                    color: isActive || (item.id === "settings" && onUserMgmtPage) || (item.id === "chat" && onChatArea) ? "#fff" : "#71768a",
+                    fontWeight: isActive || (item.id === "settings" && onUserMgmtPage) || (item.id === "chat" && onChatArea) ? 700 : 500,
                   })}
                 >
                   <span>{item.icon}</span>

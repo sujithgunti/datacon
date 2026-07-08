@@ -32,9 +32,22 @@ export class ChatService {
     return this.prisma.conversation.create({ data: { userId, title: "New chat" } });
   }
 
-  async listConversations(userId: string) {
+  async listConversations(userId: string, search?: string) {
+    const term = search?.trim();
+    // Claude-style search: match the title OR any message's text (both
+    // case-insensitive), so a query finds conversations by what was said in
+    // them, not just what they were auto-titled.
+    const where = term
+      ? {
+          userId,
+          OR: [
+            { title: { contains: term, mode: "insensitive" as const } },
+            { messages: { some: { text: { contains: term, mode: "insensitive" as const } } } },
+          ],
+        }
+      : { userId };
     const conversations = await this.prisma.conversation.findMany({
-      where: { userId },
+      where,
       orderBy: { updatedAt: "desc" },
       include: { messages: { orderBy: { createdAt: "desc" }, take: 1, select: { text: true } } },
     });

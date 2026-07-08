@@ -26,8 +26,8 @@ export class ChatController {
   ) {}
 
   @Get("conversations")
-  async conversations(@CurrentUser() user: AuthenticatedUser) {
-    return this.chat.listConversations(user.id);
+  async conversations(@Query("search") search: string | undefined, @CurrentUser() user: AuthenticatedUser) {
+    return this.chat.listConversations(user.id, search);
   }
 
   @Post("conversations")

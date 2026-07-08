@@ -14,6 +14,7 @@ import { PermissionsPage } from "./routes/settings/PermissionsPage";
 import { ConnectorsPage } from "./routes/connectors/ConnectorsPage";
 import { DataSourcesPage } from "./routes/data-sources/DataSourcesPage";
 import { ChatPage } from "./routes/chat/ChatPage";
+import { ChatHistoryPage } from "./routes/chat/ChatHistoryPage";
 import { ForecastsPage } from "./routes/forecasts/ForecastsPage";
 import { InsightsPage } from "./routes/insights/InsightsPage";
 import { ThemesPage } from "./routes/themes/ThemesPage";
@@ -39,6 +40,7 @@ function AppRoutes() {
         }
       >
         <Route path="/chat" element={<ChatPage />} />
+        <Route path="/chat/history" element={<ChatHistoryPage />} />
         <Route path="/insights" element={<InsightsPage />} />
         <Route path="/connectors" element={<ConnectorsPage />} />
         <Route path="/data-sources" element={<DataSourcesPage />} />
