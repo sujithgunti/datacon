@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
-import { usePersonas } from "../../api/auth";
 import { useConversations, useCreateConversation, useDeleteConversation } from "../../api/chat";
 
 interface NavDef {
@@ -32,8 +31,7 @@ const SUB_NAV = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const { user, caps, quickLogin, logout } = useAuth();
-  const { data: personas } = usePersonas();
+  const { user, caps, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -130,6 +128,10 @@ export function Sidebar() {
           </button>
         )}
 
+        {/* One scrollable region for nav + recent conversations, so expanding
+            User Management (or a long chat list) scrolls here instead of
+            pushing the pinned user card off the bottom. */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }} className="dv-side-scroll">
         <nav style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0 }}>
           {NAV.map((item) => {
             if (item.id === "settings" && !caps.admin) return null;
@@ -190,12 +192,12 @@ export function Sidebar() {
           })}
         </nav>
 
-        {!collapsed ? (
-          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginTop: 16 }}>
+        {!collapsed && (
+          <div style={{ marginTop: 16 }}>
             <div style={{ font: "600 9.5px 'IBM Plex Mono',monospace", letterSpacing: ".14em", color: "#a3a8bd", marginBottom: 6, padding: "0 4px" }}>
               RECENT CONVERSATIONS
             </div>
-            <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+            <div>
               {conversations?.map((c) => {
                 const active = c.id === activeConversationId;
                 return (
@@ -237,12 +239,10 @@ export function Sidebar() {
               })}
             </div>
           </div>
-        ) : (
-          <div style={{ flex: 1 }} />
         )}
+        </div>
 
-        <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #f3f4f9" }}>
-          {!collapsed && <div style={{ font: "600 9.5px 'IBM Plex Mono',monospace", letterSpacing: ".14em", color: "#a3a8bd", marginBottom: 8 }}>VIEWING AS</div>}
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #f3f4f9", flexShrink: 0 }}>
           {!collapsed && user && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f5f6fb", borderRadius: 11, padding: "8px 9px", marginBottom: 8 }}>
               <Avatar grad={user.avatarGrad} initials={user.initials} size={34} />
@@ -254,29 +254,9 @@ export function Sidebar() {
               </div>
             </div>
           )}
-          {!collapsed && (
-            <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-              {personas?.map((p) => (
-                <button
-                  key={p.id}
-                  title={p.name}
-                  onClick={() => quickLogin(p.id)}
-                  style={{
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 3,
-                    padding: "5px 2px",
-                    borderRadius: 9,
-                    border: `1px solid ${user?.id === p.id ? "var(--ac-ring)" : "transparent"}`,
-                    background: user?.id === p.id ? "var(--ac-soft)" : "transparent",
-                  }}
-                >
-                  <Avatar grad={p.avatarGrad} initials={p.initials} size={22} ring={user?.id === p.id} />
-                  <span style={{ fontSize: 9.5, color: "#71768a" }}>{p.name.split(" ")[0]}</span>
-                </button>
-              ))}
+          {collapsed && user && (
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+              <Avatar grad={user.avatarGrad} initials={user.initials} size={30} />
             </div>
           )}
           <div style={{ display: "flex", gap: 6, justifyContent: collapsed ? "center" : "stretch" }}>
