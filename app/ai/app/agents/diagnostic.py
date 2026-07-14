@@ -1,15 +1,42 @@
 from app.agents.types import AgentPrep
+from app.query_engine.executor import answer_question
+from app.query_engine.extract import column_index
 from app.rag.chroma_store import query as chroma_query
 
 SYSTEM = (
-    "You are Datacon's diagnostic analytics agent. Given a real computed ticket-spike "
-    "figure and real cited document excerpts, write one tight paragraph (3-4 sentences) "
+    "You are Datacon's diagnostic analytics agent. Given a real computed spike figure "
+    "and real cited document excerpts, write one tight paragraph (3-4 sentences) "
     "explaining the likely root cause. Only reference the provided citations."
 )
 
+NO_DATA_TEXT = (
+    "No day-by-day event data is connected yet. Connect a data source with a daily "
+    "count (e.g. tickets, incidents) to enable spike detection."
+)
 
-def prepare(question: str, context: dict) -> AgentPrep:
-    daily = context["ticketDaily"]  # [{date, region, count}], chronological, last = today
+_DAILY_COUNT_QUESTION = (
+    "Count of events per day for the most relevant countable/event log, grouped and "
+    "ordered chronologically, for the last 8 days."
+)
+
+
+async def prepare(question: str) -> AgentPrep:
+    result = await answer_question(_DAILY_COUNT_QUESTION)
+    region_idx = column_index(result.columns, "region", "category", "group") if result.ok else -1
+    count_idx = column_index(result.columns, "count", "total") if result.ok else -1
+
+    if not result.ok or count_idx < 0 or len(result.rows) < 2:
+        return AgentPrep(
+            system=SYSTEM,
+            prompt=f"Question: {question}\n\nNo day-by-day event data is connected.",
+            offline_text=NO_DATA_TEXT,
+            payload={"citations": [], "correlation": None},
+        )
+
+    daily = [
+        {"region": str(row[region_idx]) if region_idx >= 0 else "overall", "count": float(row[count_idx])}
+        for row in result.rows
+    ]
     baseline = daily[:-1]
     spike = daily[-1]
     avg = sum(d["count"] for d in baseline) / len(baseline) if baseline else spike["count"]
@@ -34,14 +61,14 @@ def prepare(question: str, context: dict) -> AgentPrep:
     )
 
     offline_text = (
-        f"{spike['region']} support tickets rose {pct:+.0f}% versus the 7-day average "
-        f"({spike['count']} vs a baseline of {avg:.0f}/day). Correlating the ticket database with your uploaded incident memos,"
+        f"{spike['region']} events rose {pct:+.0f}% versus the baseline average "
+        f"({spike['count']:.0f} vs a baseline of {avg:.0f}/day). Correlating this with your uploaded documents,"
         f"{citation_desc}"
     )
 
     prompt = (
-        f"Question: {question}\n\nComputed facts:\n- {spike['region']} tickets today: {spike['count']}\n"
-        f"- 7-day baseline average: {avg:.1f}\n- Change: {pct:+.0f}%\n"
+        f"Question: {question}\n\nComputed facts:\n- {spike['region']} count today: {spike['count']:.0f}\n"
+        f"- Baseline average: {avg:.1f}\n- Change: {pct:+.0f}%\n"
         f"- Cited excerpts: {[c['snippet'] for c in citations]}"
     )
 
@@ -49,5 +76,5 @@ def prepare(question: str, context: dict) -> AgentPrep:
         system=SYSTEM,
         prompt=prompt,
         offline_text=offline_text,
-        payload={"citations": citations, "correlation": f"ticket spike ↔ {citations[0]['documentTitle']}" if citations else None},
+        payload={"citations": citations, "correlation": f"spike ↔ {citations[0]['documentTitle']}" if citations else None},
     )

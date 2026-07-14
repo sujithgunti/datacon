@@ -1,44 +1,30 @@
 from app.agents.types import AgentPrep
+from app.query_engine.executor import answer_question
 
 SYSTEM = (
-    "You are Datacon's descriptive analytics agent. Given real computed revenue-by-region "
-    "figures, write one tight paragraph (3-4 sentences) summarizing them for a business "
-    "audience. Do not invent numbers beyond what's provided."
+    "You are Datacon's descriptive analytics agent. Given a real query result table, "
+    "answer the user's question about it in one tight paragraph (3-4 sentences) for a "
+    "business audience. Do not invent numbers beyond what's provided."
 )
 
 
-def prepare(question: str, context: dict) -> AgentPrep:
-    current = context["regionRevenue"]["current"]  # [{region, revenue}]
-    previous = context["regionRevenue"]["previous"]
+def _stringify_row(row: list) -> list:
+    return [v if v is None or isinstance(v, (int, float, bool, str)) else str(v) for v in row]
 
-    current_sorted = sorted(current, key=lambda r: -r["revenue"])
-    total_current = sum(r["revenue"] for r in current)
-    total_previous = sum(r["revenue"] for r in previous)
-    growth_pct = (total_current - total_previous) / total_previous * 100
-    top_region = current_sorted[0]
 
-    max_rev = current_sorted[0]["revenue"]
-    bars = [
-        {"label": r["region"], "value": f"${r['revenue']:.2f}M", "pct": round(r["revenue"] / max_rev * 90) + 10}
-        for r in current_sorted
-    ]
+async def prepare(question: str) -> AgentPrep:
+    result = await answer_question(question)
 
-    region_parts = [f"{r['region']} at ${r['revenue']:.2f}M ({r['revenue'] / total_current * 100:.0f}%)" for r in current_sorted]
-    region_desc = ", ".join(region_parts)
-    region_sentence = region_parts[0] if len(region_parts) == 1 else f"{region_parts[0]}, followed by {', '.join(region_parts[1:])}"
+    if not result.ok:
+        return AgentPrep(
+            system=SYSTEM,
+            prompt=f"Question: {question}\n\n{result.message}",
+            offline_text=result.message,
+            payload={"columns": [], "rows": []},
+        )
 
-    offline_text = (
-        f"Revenue last quarter totaled ${total_current:.2f}M across four regions. "
-        f"{region_sentence}. "
-        f"Quarter-over-quarter growth was {'+' if growth_pct >= 0 else ''}{growth_pct:.1f}%, "
-        f"driven mainly by {top_region['region']} enterprise renewals."
-    )
+    shown_rows = [_stringify_row(row) for row in result.rows[:20]]
+    prompt = f"Question: {question}\n\nQuery result:\nColumns: {result.columns}\nRows: {shown_rows}"
+    offline_text = f"Found {len(result.rows)} result row(s) for \"{question}\" across columns {', '.join(result.columns)}."
 
-    prompt = (
-        f"Question: {question}\n\n"
-        f"Computed facts:\n- Total revenue last quarter: ${total_current:.2f}M\n"
-        f"- By region: {region_desc}\n- QoQ growth: {growth_pct:+.1f}%\n"
-        f"- Leading region: {top_region['region']}"
-    )
-
-    return AgentPrep(system=SYSTEM, prompt=prompt, offline_text=offline_text, payload={"bars": bars})
+    return AgentPrep(system=SYSTEM, prompt=prompt, offline_text=offline_text, payload={"columns": result.columns, "rows": shown_rows})
